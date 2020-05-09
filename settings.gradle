@@ -1,0 +1,3 @@
+rootProject.name='InternetChecker'
+include ':app'
+include ':internetchecker'
