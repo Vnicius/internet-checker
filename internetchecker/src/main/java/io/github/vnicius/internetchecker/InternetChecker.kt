@@ -11,8 +11,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
 object InternetChecker : LifecycleObserver {
-    private val mutableLiveDataInternetState = MutableLiveData<InternetState>().apply {
-        value = InternetState.UNAVAILABLE
+    private val mutableLiveDataInternetState = MutableLiveData<Boolean>().apply {
+        value = false
     }
     private val connectivityCallback: ConnectivityManager.NetworkCallback by lazy {
         object : ConnectivityManager.NetworkCallback() {
@@ -42,9 +42,9 @@ object InternetChecker : LifecycleObserver {
     private var availableNetworksList: MutableSet<Network> = mutableSetOf()
     private lateinit var connectivityManager: ConnectivityManager
 
-    val liveDataInternetState: LiveData<InternetState> = mutableLiveDataInternetState
-    val hasInternet
-        get() = liveDataInternetState.value == InternetState.AVAILABLE
+    val liveDataIsInternetAvailable: LiveData<Boolean> = mutableLiveDataInternetState
+    val isInternetAvailable
+        get() = liveDataIsInternetAvailable.value == true
 
     fun init(context: Context) {
         connectivityManager = context.applicationContext
@@ -67,13 +67,9 @@ object InternetChecker : LifecycleObserver {
         } else {
             availableNetworksList.isNotEmpty()
         }
-        val internetState = if (hasInternetAvailable)
-            InternetState.AVAILABLE
-        else
-            InternetState.UNAVAILABLE
 
-        if (internetState != liveDataInternetState.value) {
-            mutableLiveDataInternetState.postValue(internetState)
+        if (hasInternetAvailable != liveDataIsInternetAvailable.value) {
+            mutableLiveDataInternetState.postValue(hasInternetAvailable)
         }
     }
 }
