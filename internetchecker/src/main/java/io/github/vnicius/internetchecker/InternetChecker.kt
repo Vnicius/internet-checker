@@ -6,11 +6,13 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
+import android.os.Handler
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
 object InternetChecker : LifecycleObserver {
+    private const val PING_DELAY = 5000L
     private val mutableLiveDataInternetState = MutableLiveData<Boolean>().apply {
         value = false
     }
@@ -39,14 +41,36 @@ object InternetChecker : LifecycleObserver {
             }
         }
     }
+    private lateinit var pingHelper: PingHelper
+    private val pingHandler = Handler()
+    private val pingProcess = object : Runnable {
+        override fun run() {
+            try {
+                pingHandler.removeCallbacks(this)
+
+                if (::pingHelper.isInitialized) {
+                    pingHelper.ping(onError = {
+                        availableNetworksList.clear()
+                        updateConnectionState()
+                    })
+                }
+
+                pingHandler.postDelayed(this, pingDelay)
+            } catch (e: Exception) {
+            }
+        }
+    }
     private var availableNetworksList: MutableSet<Network> = mutableSetOf()
     private lateinit var connectivityManager: ConnectivityManager
+    private var pingDelay: Long = PING_DELAY
 
     val liveDataIsInternetAvailable: LiveData<Boolean> = mutableLiveDataInternetState
     val isInternetAvailable
         get() = liveDataIsInternetAvailable.value == true
 
-    fun init(context: Context) {
+    fun init(context: Context, pingDelay: Long = PING_DELAY) {
+        this.pingDelay = pingDelay
+
         connectivityManager = context.applicationContext
             .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -56,7 +80,15 @@ object InternetChecker : LifecycleObserver {
                 .build(),
             connectivityCallback
         )
+
+        pingHelper = PingHelper(context.applicationContext)
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            pingHandler.post(pingProcess)
+        }
     }
+
+    fun disablePing() = pingHandler.removeCallbacks(pingProcess)
 
     private fun updateConnectionState() {
         val hasInternetAvailable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
