@@ -37,6 +37,16 @@ Initialize in your `Application` or `Activity`
     ...
 ```
 
+#### Optional for `API >= 23`
+
+For `API < 23', a ping is needed to find out if the current connection reaches the Internet. So, you can set the delay for the pings (the default is 5000ms)
+
+```kotlin
+    ...
+    InternetChecker.init(context, pingDelay)
+    ...
+```
+
 ### Check the internet state
 
 You can check if has internet connection directaly with
